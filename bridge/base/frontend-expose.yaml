@@ -1,0 +1,18 @@
+#! frontend-expose.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: Service
+metadata:
+    name: frontend
+    namespace: my-python-vue-app
+    labels:
+        com.docker.compose.project: my-python-vue-app
+        com.docker.compose.service: frontend
+spec:
+    selector:
+        com.docker.compose.project: my-python-vue-app
+        com.docker.compose.service: frontend
+    ports:
+        - name: frontend-4173
+          port: 4173
+          targetPort: frontend-4173

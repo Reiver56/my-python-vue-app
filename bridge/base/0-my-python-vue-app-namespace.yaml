@@ -1,0 +1,8 @@
+#! 0-my-python-vue-app-namespace.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: Namespace
+metadata:
+    name: my-python-vue-app
+    labels:
+        com.docker.compose.project: my-python-vue-app

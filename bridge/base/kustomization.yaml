@@ -1,0 +1,15 @@
+#! kustomization.yaml
+# Generated code, do not edit
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+    - 0-my-python-vue-app-namespace.yaml
+    - backend-C:\Users\greve\my-python-vue-app\my-python-vue-app\backend-persistentVolumeClaim.yaml
+    - backend-deployment.yaml
+    - backend-expose.yaml
+    - backend-service.yaml
+    - default-network-policy.yaml
+    - frontend-C:\Users\greve\my-python-vue-app\my-python-vue-app\frontend-persistentVolumeClaim.yaml
+    - frontend-deployment.yaml
+    - frontend-expose.yaml
+    - frontend-service.yaml
