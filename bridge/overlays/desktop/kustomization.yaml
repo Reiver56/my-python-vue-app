@@ -1,0 +1,11 @@
+#! kustomization.yaml
+# Generated code, do not edit
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+    - ../../base
+patches:
+    - path: backend-C:\Users\greve\my-python-vue-app\my-python-vue-app\backend-persistentVolumeClaim.yaml
+    - path: backend-service.yaml
+    - path: frontend-C:\Users\greve\my-python-vue-app\my-python-vue-app\frontend-persistentVolumeClaim.yaml
+    - path: frontend-service.yaml

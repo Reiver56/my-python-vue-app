@@ -4,15 +4,17 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "dev": "vite --host"
   },
   "dependencies": {
-    "vue": "^3.5.17"
+    "axios": "^1.10.0",
+    "monaco-editor": "^0.52.2",
+    "vue": "^3.5.17",
+    "vue-monaco": "^1.2.2"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
-    "vite": "^7.0.4"
+    "vite": "^7.0.5",
+    "vue": "^3.0.0"
   }
 }

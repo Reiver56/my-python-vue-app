@@ -1,30 +1,42 @@
-<script setup>
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
-  </div>
-  <HelloWorld msg="Vite + Vue" />
+  <main>
+    <h1>NodePython</h1>
+    <textarea v-model="code" rows="10" cols="50"></textarea>
+    <br />
+    <button @click="runCode">Execute</button>
+    <pre>{{ output }}</pre>
+  </main>
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
+<script setup>
+import { ref } from 'vue'
+import axios from 'axios'
+
+const code = ref(`print("Ciao dal backend!")`)
+const output = ref('')
+
+async function runCode() {
+  try {
+    const res = await axios.post('http://localhost:8000/run', { code: code.value })
+    output.value = res.data.output
+  } catch (err) {
+    output.value = 'Errore: ' + (err.response?.data?.detail || err.message)
+  }
 }
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
+</script>
+
+<style>
+main {
+  padding: 2rem;
+  font-family: sans-serif;
 }
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
+textarea {
+  width: 100%;
+  font-family: monospace;
+}
+pre {
+  background-color: #0c0909ff;
+  padding: 1rem;
+  white-space: pre-wrap;
 }
 </style>

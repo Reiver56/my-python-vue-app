@@ -1,0 +1,40 @@
+#! backend-deployment.yaml
+# Generated code, do not edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: backend
+    namespace: my-python-vue-app
+    labels:
+        com.docker.compose.project: my-python-vue-app
+        com.docker.compose.service: backend
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            com.docker.compose.project: my-python-vue-app
+            com.docker.compose.service: backend
+    strategy:
+        type: Recreate
+    template:
+        metadata:
+            labels:
+                com.docker.compose.project: my-python-vue-app
+                com.docker.compose.service: backend
+                com.docker.compose.network.default: "true"
+        spec:
+            restartPolicy: Always
+            containers:
+                - name: backend
+                  image: my-python-vue-app-backend
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                    - name: backend-8000
+                      containerPort: 8000
+                  volumeMounts:
+                    - name: app
+                      mountPath: /app
+            volumes:
+                - name: app
+                  hostPath:
+                    path: C:\Users\greve\my-python-vue-app\my-python-vue-app\backend

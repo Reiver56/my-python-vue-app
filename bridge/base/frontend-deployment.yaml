@@ -1,0 +1,40 @@
+#! frontend-deployment.yaml
+# Generated code, do not edit
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+    name: frontend
+    namespace: my-python-vue-app
+    labels:
+        com.docker.compose.project: my-python-vue-app
+        com.docker.compose.service: frontend
+spec:
+    replicas: 1
+    selector:
+        matchLabels:
+            com.docker.compose.project: my-python-vue-app
+            com.docker.compose.service: frontend
+    strategy:
+        type: Recreate
+    template:
+        metadata:
+            labels:
+                com.docker.compose.project: my-python-vue-app
+                com.docker.compose.service: frontend
+                com.docker.compose.network.default: "true"
+        spec:
+            restartPolicy: Always
+            containers:
+                - name: frontend
+                  image: my-python-vue-app-frontend
+                  imagePullPolicy: IfNotPresent
+                  ports:
+                    - name: frontend-4173
+                      containerPort: 4173
+                  volumeMounts:
+                    - name: app
+                      mountPath: /app
+            volumes:
+                - name: app
+                  hostPath:
+                    path: C:\Users\greve\my-python-vue-app\my-python-vue-app\frontend

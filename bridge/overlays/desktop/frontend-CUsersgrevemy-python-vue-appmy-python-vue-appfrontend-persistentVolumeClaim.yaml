@@ -1,0 +1,9 @@
+#! frontend-C:\Users\greve\my-python-vue-app\my-python-vue-app\frontend-persistentVolumeClaim.yaml
+# Generated code, do not edit
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+    name: frontend-c--users-greve-my-python-vue-app-my-python-vue-app-frontend
+    namespace: my-python-vue-app
+spec:
+    storageClassName: "hostpath" # see docker/desktop-storage-provisioner
