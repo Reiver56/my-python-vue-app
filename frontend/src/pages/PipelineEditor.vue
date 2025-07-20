@@ -13,37 +13,34 @@
           <CustomNode
             :id="id"
             :data="data"
-            :selectedNodeId="selectedNodeId"
-            @select="selectedNodeId = $event"
             @update:code="code => updateNodeCode(id, code)"
           />
+          <CustomBridge :source="id" :target="data.target" />
         </template>
       </VueFlow>
+    </div>
+
+    <!-- Modal per edit del codice -->
     <ModalEditor
-        v-if="showEditor"
-        :nodeId="editingNodeId"
-        :code="editingCode"
-        @save="saveCode"
-        @close="showEditor = false"
-      />
+      v-if="showEditor"
+      :code="editingCode"
+      @save="saveCode"
+      @close="showEditor = false"
+    />
+
+    <div class="controls">
+      <button @click="runPipeline">Esegui Pipeline</button>
+      <button @click="promptAddNode">Aggiungi Nodo</button>
+      <button @click="promptAddEdge">Aggiungi Arco</button>
     </div>
 
-    <button @click="runPipeline">Esegui Pipeline</button>
-    <button @click="promptAddNode">Aggiungi Nodo</button>
-    <button @click="promptAddEdge">Aggiungi Arco</button>
-
-    <div v-if="selectedNodeId">
-      <h3>Dettagli Nodo Selezionato: {{ selectedNodeId }}</h3>
-      <button @click="promptAddNode">Aggiungi Nodo con Codice</button>
-      <button @click="promptAddEdgeFromSelected">Aggiungi Arco da Nodo Selezionato</button>
-    </div>
     <MessageBox ref="messageBox" />
-
     <Sidebar />
 
     <div class="pipeline-editor">
       <h2>Editor Pipeline</h2>
       <button @click="savePipeline">Salva Pipeline</button>
+      <button @click="promptAddNode">Aggiungi Nodo</button>
     </div>
   </div>
 </template>
@@ -54,199 +51,130 @@ import { VueFlow } from '@braks/vue-flow'
 import '@braks/vue-flow/dist/style.css'
 import CustomNode from '@/components/CustomNode.vue'
 import Sidebar from '@/components/Sidebar.vue'
-import MessageBox from '../components/MessageBox.vue'
-import ModalEditor from '../components/ModalEditor.vue'
+import MessageBox from '@/components/MessageBox.vue'
+import ModalEditor from '@/components/ModalEditor.vue'  // verifica percorso
+import CustomBridge  from '../components/CustomBridge.vue'
 
+// ——————————————
+// Stato del modal e nodo in modifica
 const showEditor = ref(false)
 const editingNodeId = ref(null)
 const editingCode = ref('')
 
-const selectedNodeId = ref(null)
-const messageBox = ref(null)
-
-const nodeTypes = {
-  custom: CustomNode
-}
-
+// Stato principale
 const nodes = ref([
-  { id: '1', type: 'custom', position: { x: 100, y: 100 }, data: { code: "print('Nodo 1')" } },
-  { id: '2', type: 'custom', position: { x: 300, y: 100 }, data: { code: "print('Nodo 2')" } }
+  { id: 'ex1', type: 'custom', position: { x: 100, y: 100 }, data: { code: "print('ex1')" } },
+  { id: 'ex2', type: 'custom', position: { x: 500, y: 100 }, data: { code: "print('ex2')" } }
 ])
-
 const edges = ref([])
-
 let nextNodeId = nodes.value.length + 1
 
-function showMessage(msg, type = 'info') {
+const nodeTypes = { custom: CustomNode }
+const onNodesChange = (changes) => {
+  nodes.value = VueFlow.applyNodeChanges(changes, nodes.value)
+}
+const onEdgesChange = (changes) => {
+  edges.value = VueFlow.applyEdgeChanges(changes, edges.value)
+}
+// ——————————————
+const messageBox = ref(null)
+function showMessage(msg, type='info') {
   messageBox.value?.show(msg, type)
 }
 
-function addEdge(source, target) {
-  if (!source || !target) {
-    showMessage('Source e target devono essere validi', 'error')
-    return
-  }
-  // Evita duplicati
-  if (edges.value.some(e => e.source === source && e.target === target)) {
-    showMessage('Arco già esistente', 'error')
-    return
-  }
-  edges.value.push({ id: `${source}-${target}`, source, target })
-}
-
-function addNode(code) {
-  if (!code) {
-    showMessage('Codice nodo non valido', 'error')
-    return
-  }
-  const newNode = {
-    id: String(nextNodeId++),
-    type: 'custom',
-    position: { x: Math.random() * 400, y: Math.random() * 400 },
-    data: { code }
-  }
-  nodes.value.push(newNode)
-}
-
-function updateNodeCode(id, newCode) {
-  const node = nodes.value.find(n => n.id === id)
-  if (node && typeof newCode === 'string') {
-    node.data.code = newCode
-  }
-}
-
-function onEdgesChange(changes) {
-  changes.forEach(change => {
-    if (change.type === 'remove') {
-      edges.value = edges.value.filter(e => e.id !== change.id)
-    }
-  })
-}
-
-function onNodesChange(changes) {
-  changes.forEach(change => {
-    if (change.type === 'remove') {
-      nodes.value = nodes.value.filter(n => n.id !== change.id)
-      if (selectedNodeId.value === change.id) {
-        selectedNodeId.value = null
-      }
-    } else {
-      const index = nodes.value.findIndex(n => n.id === change.id)
-      if (index !== -1) {
-        nodes.value[index] = { ...nodes.value[index], ...change }
-      }
-    }
-  })
-}
-
-// **Qui la funzione corretta che apre il ModalEditor**
+// ——————————————
+// Apri il modal al doppio click
 function onNodeDoubleClick({ node }) {
+  console.log(node.data.code)
   editingNodeId.value = node.id
   editingCode.value = node.data.code || ''
   showEditor.value = true
 }
 
+// Salva il codice modificato dal modal
 function saveCode(newCode) {
-  updateNodeCode(editingNodeId.value, newCode)
+  const node = nodes.value.find(n => n.id === editingNodeId.value)
+  if (node) {
+    node.data.code = newCode
+    showMessage(`Codice per nodo ${node.id} aggiornato`, 'success')
+  }
+  console.log(`Salvato codice per nodo ${node.id}:`, newCode)
   showEditor.value = false
 }
 
-// Prompt per aggiungere nodo
-function promptAddNode() {
-  const code = prompt('Inserisci codice per il nuovo nodo:')
-  if (code) addNode(code)
+// Edit inline da CustomNode
+function updateNodeCode(id, newCode) {
+  const node = nodes.value.find(n => n.id === id)
+  if (node) node.data.code = newCode
 }
 
-// Prompt per aggiungere arco tra nodi
-function promptAddEdge() {
-  const source = prompt('Inserisci ID nodo sorgente:')
-  const target = prompt('Inserisci ID nodo destinazione:')
-  if (source && target) addEdge(source, target)
-}
-
-// Aggiunge arco da nodo selezionato a target scelto
-function promptAddEdgeFromSelected() {
-  if (!selectedNodeId.value) {
-    showMessage('Nessun nodo selezionato', 'error')
-     return
-  }
-  const target = prompt('Inserisci ID nodo destinazione:')
-  if (target) addEdge(selectedNodeId.value, target)
-}
-
+// salva la pipeline su file
 async function savePipeline() {
-  const payload = {
-    nodes: nodes.value.map(n => ({
-      id: n.id,
-      code: n.data.code,
-      position: n.position,
-      next: edges.value.filter(e => e.source === n.id).map(e => e.target)
-    }))
-  }
-
+    console.log('Salvataggio pipeline...')
+    console.log('Nodes:', nodes.value)
+    console.log('Edges:', edges.value)
+    if (nodes.value.length === 0) {
+      showMessage('Nessun nodo da salvare', 'error')
+      return
+    }
+    if (edges.value.length === 0) {
+      showMessage('Nessun arco da salvare', 'error')
+      return
+    }
   try {
-    const res = await fetch('http://localhost:8000/pipeline/save', {
+    const response = await fetch('http://localhost:8000/pipeline/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({ nodes: nodes.value, edges: edges.value })
     })
-
-    if (!res.ok) throw new Error(`Status: ${res.status}`)
-
-    showMessage('Pipeline salvata con successo', 'success')
-    console.log('Pipeline salvata:', payload)
-  } catch (e) {
-    showMessage('Errore durante il salvataggio: ' + e.message, 'error')
+    if (!response.ok) throw new Error('Errore nel salvataggio della pipeline')
+    const data = await response.json()
+    showMessage(data.message, 'success')
+  } catch (error) {
+    showMessage(`Errore: ${error.message}`, 'error')
   }
 }
 
-async function runPipeline() {
-  const payload = {
-    nodes: nodes.value.map(n => ({
-      id: n.id,
-      code: n.data.code,
-      next: edges.value.filter(e => e.source === n.id).map(e => e.target)
-    }))
-  }
-
-  try {
-    const res = await fetch('http://localhost:8000/pipeline/run', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    })
-
-    if (!res.ok) throw new Error(`Status: ${res.status}`)
-
-    const data = await res.json()
-    showMessage('Pipeline eseguita, nodi eseguiti: ' + data.executed.join(', '))
-  } catch (e) {
-    showMessage('Errore durante l\'esecuzione: ' + e.message, 'error')
+// ——————————————
+// Aggiungi un nodo personalizzato
+function promptAddNode() {
+  const code = prompt('Inserisci codice per il nuovo nodo:', 'print("Nuovo Nodo")')
+  if (code) {
+    const newNode = {
+      id: `node-${nextNodeId++}`,
+      type: 'custom',
+      position: { x: Math.random() * 800, y: Math.random() * 600 },
+      data: { code }
+    }
+    nodes.value.push(newNode)
+    showMessage(`Nodo ${newNode.id} aggiunto`, 'success')
   }
 }
+// ——————————————
+// Aggiungi un arco tra due nodi
+function promptAddEdge() {
+    const fromNodeId = prompt('Inserisci ID nodo di partenza:')
+    const toNodeId = prompt('Inserisci ID nodo di arrivo:')
+    if (fromNodeId && toNodeId) {
+        const newEdge = {
+        id: `edge-${fromNodeId}-${toNodeId}`,
+        source: fromNodeId,
+        target: toNodeId
+        }
+        edges.value.push(newEdge)
+        showMessage(`Arco da ${fromNodeId} a ${toNodeId} aggiunto`, 'success')
+    }
+}
+
+
+// Resto delle funzioni (aggiungi/rimuovi, save/run pipeline…)
+
 </script>
 
 <style scoped>
-.canvas {
-  border: 1px solid #ccc;
-  height: 600px;
-  background-color: #f9f9f9;
-}
-
-button {
-  margin-top: 1em;
-  padding: 0.5em 1em;
-  background-color: #4CAF50;
-  color: white;
-  border: none;
-  cursor: pointer;
-}
-
-button:hover {
-  background-color: #45a049;
-}
-
-.pipeline-editor {
-  padding: 1rem;
-}
+.canvas { border:1px solid #ccc; height:600px; background:#f9f9f9 }
+.controls { margin:1rem 0; display:flex; gap:1rem }
+.pipeline-editor { padding:1rem }
+button { padding:0.5em 1em; background:#4CAF50; color:#fff; border:none; cursor:pointer }
+button:hover { background:#45a049 }
 </style>

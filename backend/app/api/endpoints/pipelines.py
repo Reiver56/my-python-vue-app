@@ -22,9 +22,12 @@ async def save_pipeline(pipeline: Pipeline):
     try:
         with open(PIPELINE_PATH, "w") as f:
             json.dump(pipeline.dict(), f, indent=2)
+            print(f"Pipeline salvata su {PIPELINE_PATH}")
         return {"message": "Pipeline salvata su file"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Errore nel salvataggio: {str(e)}")
+    finally:
+        print("Operazione di salvataggio completata.")
 
 @router.post("/pipeline/run")
 def run_pipeline(_: Any = None):
