@@ -7,10 +7,13 @@
     "dev": "vite --host"
   },
   "dependencies": {
+    "@braks/vue-flow": "^0.4.41",
     "axios": "^1.10.0",
     "monaco-editor": "^0.52.2",
+    "monaco-editor-vue3": "^0.1.10",
     "vue": "^3.5.17",
-    "vue-monaco": "^1.2.2"
+    "vue-monaco": "^1.2.2",
+    "vue-router": "^4.5.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.0",
