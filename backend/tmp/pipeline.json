@@ -1,0 +1,14 @@
+{
+  "nodes": [
+    {
+      "id": "1",
+      "code": "print('Nodo 1')",
+      "next": []
+    },
+    {
+      "id": "2",
+      "code": "print('Nodo 2')",
+      "next": []
+    }
+  ]
+}
