@@ -1,105 +1,87 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 import json
 import os
-from typing import List, Dict, Any
+from fastapi import APIRouter, HTTPException, Path, Body
+from pydantic import BaseModel, Extra
+from typing import List, Dict, Any, Optional
 
 router = APIRouter()
 
-# Ogni nodo rappresenta un blocco di codice e connessioni ai successivi
+# Path di storage file
+PIPELINE_PATH = "/tmp"
+NODE_FOLDER = "../tmp/nodes"
 class Node(BaseModel):
     id: str
     code: str
-    next: List[str]  # ID dei nodi successivi
+    next: List[str]
+    position: Dict[str, float] = {}  # opzionale
+
+    class Config:
+        extra = Extra.ignore  # ignora campi extra
 
 class Pipeline(BaseModel):
     nodes: List[Node]
 
-PIPELINE_PATH = "tmp/pipeline.json"
-
+@router.post("/pipeline/{node_id}/savenode")
+async def save_node(
+    node_id: str = Path(..., description="ID del nodo da salvare"),
+    code: str = Body(
+        ..., 
+        media_type="application/json",
+        description="Codice Python del nodo come stringa"
+    )
+):
+    try:
+        os.makedirs(NODE_FOLDER, exist_ok=True)
+        path = os.path.join(NODE_FOLDER, f"node_{node_id}.py")
+        with open(path, "w") as f:
+            f.write(code)
+        return {"message": f"Nodo {node_id} salvato in {path}"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+    
 @router.post("/pipeline/save")
 async def save_pipeline(pipeline: Pipeline):
+    # Scrive su file JSON
     try:
         with open(PIPELINE_PATH, "w") as f:
             json.dump(pipeline.dict(), f, indent=2)
-            print(f"Pipeline salvata su {PIPELINE_PATH}")
-        return {"message": "Pipeline salvata su file"}
+        return {"message": "Pipeline salvata"}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Errore nel salvataggio: {str(e)}")
-    finally:
-        print("Operazione di salvataggio completata.")
+        raise HTTPException(status_code=500, detail=f"Errore salvataggio: {e}")
 
 @router.post("/pipeline/run")
-def run_pipeline(_: Any = None):
-    if not os.path.exists(PIPELINE_PATH):
-        raise HTTPException(status_code=404, detail="Pipeline non trovata.")
-
-    try:
-        with open(PIPELINE_PATH, "r") as f:
+async def run_pipeline(pipeline: Pipeline = None):
+    # Se chiamato senza body, carica da file
+    if pipeline is None:
+        if not os.path.exists(PIPELINE_PATH):
+            raise HTTPException(status_code=404, detail="Pipeline non trovata.")
+        with open(PIPELINE_PATH) as f:
             data = json.load(f)
-            pipeline = Pipeline(**data)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Errore nel caricamento: {str(e)}")
+        pipeline = Pipeline(**data)
 
     executed = {}
     results = {}
     node_map = {node.id: node for node in pipeline.nodes}
 
-    def execute_node(node_id):
+    def execute_node(node_id: str):
         if node_id in executed:
             return
         node = node_map.get(node_id)
         if not node:
             raise HTTPException(status_code=400, detail=f"Nodo {node_id} non trovato.")
         try:
-            local_env = {}
+            local_env: Dict[str, Any] = {}
             exec(node.code, {}, local_env)
             results[node_id] = local_env
             executed[node_id] = True
-            for next_id in node.next:
-                execute_node(next_id)
+            for nxt in node.next:
+                execute_node(nxt)
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Errore nel nodo {node_id}: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Errore nodo {node_id}: {e}")
 
-    for node in pipeline.nodes:
-        if all(node.id not in other.next for other in pipeline.nodes):
-            execute_node(node.id)
+    # Entry points
+    for n in pipeline.nodes:
+        if all(n.id not in other.next for other in pipeline.nodes):
+            execute_node(n.id)
 
     return {"executed": list(executed.keys()), "results": results}
-
-class NewNode(BaseModel):
-    id: str
-    code: str
-    position: Dict[str, float]  # per esempio {"x": 100, "y": 200}
-
-@router.post("/pipeline/add_node")
-async def add_node(node: NewNode):
-    if "latest" not in pipeline_storage:
-        pipeline_storage["latest"] = Pipeline(nodes=[])
-    
-    pipeline = pipeline_storage["latest"]
-    
-    if any(n.id == node.id for n in pipeline.nodes):
-        raise HTTPException(status_code=400, detail="Nodo con ID già esistente.")
-
-    pipeline.nodes.append(Node(id=node.id, code=node.code, next=[]))
-    return {"message": f"Nodo {node.id} aggiunto con successo"}
-
-class NewEdge(BaseModel):
-    source: str
-    target: str
-
-@router.post("/pipeline/add_edge")
-async def add_edge(edge: NewEdge):
-    if "latest" not in pipeline_storage:
-        raise HTTPException(status_code=400, detail="Nessuna pipeline trovata.")
-
-    pipeline = pipeline_storage["latest"]
-    node = next((n for n in pipeline.nodes if n.id == edge.source), None)
-    if node is None:
-        raise HTTPException(status_code=400, detail=f"Nodo sorgente {edge.source} non trovato.")
-
-    if edge.target not in node.next:
-        node.next.append(edge.target)
-
-    return {"message": f"Arco da {edge.source} a {edge.target} aggiunto con successo"}
